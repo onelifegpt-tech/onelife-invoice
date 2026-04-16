@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>報價單 / 合約產生器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ===== 左側表單 ===== */
+  .panel {
+    background: #ffffff;
+    padding: 24px;
+    border-right: 1px solid #e5e7eb;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+  .panel h2 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: #111827;
+  }
+  .panel h3 {
+    margin: 24px 0 12px 0;
+    font-size: 14px;
+    color: #4b5563;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .field {
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+  .field input,
+  .field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-family: inherit;
+    background: #fff;
+  }
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* 品項列表 */
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 90px 30px;
+    gap: 6px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .item-row input {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  .btn {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #374151;
+  }
+  .btn:hover { background: #f9fafb; }
+  .btn-primary {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #3b82f6;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 18px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .toolbar {
+    margin-top: 20px;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* 公司切換器 */
+  .company-switcher {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .company-tab {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    background: #fff;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .company-tab:hover {
+    border-color: #3b82f6;
+  }
+  .company-tab.active {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: #fff;
+  }
+  .company-tab .ct-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .company-tab .ct-sub {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+
+  /* 過往紀錄 */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: all 0.15s;
+  }
+  .history-item:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+  .history-item.active {
+    border-color: #3b82f6;
+    background: #dbeafe;
+  }
+  .history-item .hi-client {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 2px;
+  }
+  .history-item .hi-project {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+  .history-item .hi-meta {
+    font-size: 11px;
+    color: #9ca3af;
+    display: flex;
+    justify-content: space-between;
+  }
+  .history-item .hi-amount {
+    font-weight: 600;
+    color: #059669;
+  }
+
+  /* ===== 右側預覽 ===== */
+  .preview-wrap {
+    padding: 32px;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+  .invoice {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* 頁首：公司資訊（之後會換真實的） */
+  .inv-header {
+    background: #5a8a8a; /* 先用底色占位 */
+    color: #fff;
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: center;
+  }
+  .inv-title {
+    font-size: 48px;
+    font-weight: 700;
+    font-style: italic;
+    letter-spacing: 1px;
+  }
+  .inv-company {
+    text-align: right;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .inv-company .logo-placeholder {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .inv-company .co-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .inv-company .co-sub {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-bottom: 8px;
+  }
+
+  /* 內容區 */
+  .inv-body {
+    padding: 32px 40px;
+  }
+  .inv-date {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 20px;
+  }
+  .inv-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .inv-meta-box {
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .inv-meta-box .label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #111827;
+  }
+  .inv-meta-box .content {
+    color: #374151;
+    white-space: pre-line;
+  }
+
+  /* 品項表格 */
+  table.items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.items th,
+  table.items td {
+    border: 1px solid #d1d5db;
+    padding: 10px 12px;
+    vertical-align: top;
+  }
+  table.items th {
+    background: #f9fafb;
+    text-align: left;
+    font-weight: 600;
+    color: #111827;
+  }
+  table.items td.num { text-align: right; }
+  table.items .desc-col { width: 50%; }
+
+  .signature-cell {
+    vertical-align: middle;
+    padding: 24px 12px;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    font-size: 14px;
+  }
+  .totals td {
+    font-weight: 500;
+  }
+  .totals .label-cell {
+    text-align: right;
+    background: #f9fafb;
+  }
+  .totals .grand {
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  /* 付款資訊 */
+  .payment {
+    margin-top: 24px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .payment-title {
+    background: #f3f4f6;
+    padding: 10px 14px;
+    font-weight: 600;
+  }
+  .payment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .payment-grid > div {
+    padding: 10px 14px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .payment-grid > div:nth-child(odd) {
+    border-right: 1px solid #e5e7eb;
+  }
+  .payment-grid .k {
+    color: #6b7280;
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+
+  /* 備註與章 */
+  .footer-row {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: 16px;
+    align-items: start;
+  }
+  .notes {
+    font-size: 12px;
+    color: #4b5563;
+    line-height: 1.7;
+    white-space: pre-line;
+  }
+  .notes .notes-title {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+  .stamp-placeholder {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgba(220, 38, 38, 0.08);
+    border: 2px dashed #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== 左側：填寫欄位 ===== -->
+  <div class="panel">
+    <h2>報價單填寫</h2>
+
+    <h3>開立公司（切換抬頭 / 匯款資訊）</h3>
+    <div class="company-switcher" id="companySwitcher"></div>
+
+    <h3>過往紀錄（點選自動帶入）</h3>
+    <div class="history-list" id="historyList"></div>
+
+    <h3>基本資訊</h3>
+    <div class="field">
+      <label>Invoice Date（開立日期）</label>
+      <input type="date" id="invoiceDate" value="2025-12-10">
+    </div>
+    <div class="field">
+      <label>Project Name（專案名稱）</label>
+      <input type="text" id="projectName" value="XXXXXXX 宣傳">
+    </div>
+
+    <h3>Billed To（收件方）</h3>
+    <div class="field">
+      <label>公司名稱</label>
+      <input type="text" id="billCompany" value="XXXXX LTD">
+    </div>
+    <div class="field">
+      <label>VAT / 統編</label>
+      <input type="text" id="billVat" value="38821246-000-11">
+    </div>
+    <div class="field">
+      <label>地址</label>
+      <textarea id="billAddress">26/F., Beautiful Group Tower, 77 Connaught Road Central, HongKong</textarea>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="billEmail" value="joni@xmind.app">
+    </div>
+
+    <h3>品項</h3>
+    <div id="itemList"></div>
+    <button class="btn" id="addItem" type="button">+ 新增品項</button>
+
+    <h3>費用</h3>
+    <div class="field">
+      <label>Tax Rate 稅率（%）</label>
+      <input type="number" id="taxRate" value="0" min="0" step="0.01">
+    </div>
+
+    <h3>付款資訊</h3>
+    <div class="field">
+      <label>Payment Due Date（付款期限）</label>
+      <input type="date" id="dueDate" value="2026-05-30">
+    </div>
+    <div class="field">
+      <label>Account Name（戶名）</label>
+      <input type="text" id="accountName" value="雷柚媒體文創有限公司">
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Bank Name（銀行）</label>
+        <input type="text" id="bankName" value="玉山銀行（808）">
+      </div>
+      <div class="field">
+        <label>Account Number（帳號）</label>
+        <input type="text" id="accountNumber" value="1229-900-000000">
+      </div>
+    </div>
+
+    <h3>備註</h3>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="notes" rows="3">更多匯款資訊（Paypal、美國銀行...等），詳見：
+https://raymondhouch.notion.site/</textarea>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="window.print()">列印 / 存 PDF</button>
+    </div>
+  </div>
+
+  <!-- ===== 右側：即時預覽 ===== -->
+  <div class="preview-wrap">
+    <div class="invoice" id="invoice">
+
+      <div class="inv-header" id="p_header">
+        <div class="inv-title">Invoice</div>
+        <div class="inv-company">
+          <div><span class="logo-placeholder"></span></div>
+          <div class="co-name" id="p_coName">公司名稱（待提供）</div>
+          <div class="co-sub" id="p_coSub">Slogan（待提供）</div>
+          <div>Tax ID：<span id="p_coTaxId">XXXXXXXX</span></div>
+          <div id="p_coAddr">地址（待提供）</div>
+          <div id="p_coEmail">email（待提供）</div>
+        </div>
+      </div>
+
+      <div class="inv-body">
+        <div class="inv-date">Invoice Date: <span id="p_date">2025/12/10</span></div>
+
+        <div class="inv-meta">
+          <div class="inv-meta-box">
+            <div class="label">Billed To:</div>
+            <div class="content" id="p_billed"></div>
+          </div>
+          <div class="inv-meta-box">
+            <div class="label">Project Name:</div>
+            <div class="content" id="p_project"></div>
+          </div>
+        </div>
+
+        <table class="items">
+          <thead>
+            <tr>
+              <th class="desc-col">Description</th>
+              <th>Quantity</th>
+              <th>Price (USD)</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="p_items"></tbody>
+          <tbody class="totals">
+            <tr>
+              <td rowspan="3" class="signature-cell"><em>Client Signature</em></td>
+              <td colspan="2" class="label-cell">Subtotal</td>
+              <td class="num" id="p_subtotal">0</td>
+            </tr>
+            <tr>
+              <td colspan="2" class="label-cell">Tax Rate (<span id="p_taxRate">0</span>%)</td>
+              <td class="num" id="p_tax">0</td>
+            </tr>
+            <tr>
+              <td colspan="2" class="label-cell">Grand Total (USD)</td>
+              <td class="num grand" id="p_grand">0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="payment">
+          <div class="payment-title">Payment Information</div>
+          <div class="payment-grid">
+            <div>
+              <div class="k">Payment Due Date</div>
+              <div id="p_due">2026/05/30</div>
+            </div>
+            <div>
+              <div class="k">Account Name</div>
+              <div id="p_accName">—</div>
+            </div>
+            <div>
+              <div class="k">Bank Name</div>
+              <div id="p_bank">—</div>
+            </div>
+            <div>
+              <div class="k">Account Number</div>
+              <div id="p_accNum">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-row">
+          <div class="notes">
+            <div class="notes-title">Notes:</div>
+            <div id="p_notes"></div>
+          </div>
+          <div class="stamp-placeholder">發票章<br>(待提供)</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ===== 開立公司（兩間，切換抬頭與匯款資訊） =====
+  const companies = [
+    {
+      id: 'ryt',
+      name: '日月潭戶外運動專家有限公司',
+      sub: 'Sun Moon Lake Outdoor Sports Expert Co., Ltd.',
+      shortName: '日月潭戶外',
+      shortSub: '戶外運動專家',
+      taxId: '54886596',
+      address: '南投縣魚池鄉魚池村魚池街322巷9號1樓',
+      email: 'email（待提供）',
+      headerColor: '#5a8a8a',
+      // 預設匯款資訊（切換公司時套用，待提供）
+      accountName: '日月潭戶外運動專家有限公司',
+      bankName: '（待提供）',
+      accountNumber: '（待提供）'
+    },
+    {
+      id: 'ylt',
+      name: '一六堂商店',
+      sub: 'Yi Liu Tang Store',
+      shortName: '一六堂',
+      shortSub: '商店',
+      taxId: '61836538',
+      address: '南投縣埔里鎮南村里中山路四段106號',
+      email: 'email（待提供）',
+      headerColor: '#8a6a5a',
+      accountName: '一六堂商店',
+      bankName: '（待提供）',
+      accountNumber: '（待提供）'
+    }
+  ];
+
+  let activeCompanyId = 'ryt';
+
+  function renderCompanySwitcher() {
+    const sw = document.getElementById('companySwitcher');
+    sw.innerHTML = '';
+    companies.forEach(c => {
+      const tab = document.createElement('div');
+      tab.className = 'company-tab' + (activeCompanyId === c.id ? ' active' : '');
+      tab.innerHTML = `
+        <div class="ct-name">${escapeHtml(c.shortName)}</div>
+        <div class="ct-sub">${escapeHtml(c.shortSub)}</div>
+      `;
+      tab.addEventListener('click', () => {
+        activeCompanyId = c.id;
+        // 切換時同步更新匯款資訊欄位
+        document.getElementById('accountName').value = c.accountName;
+        document.getElementById('bankName').value = c.bankName;
+        document.getElementById('accountNumber').value = c.accountNumber;
+        renderCompanySwitcher();
+        renderPreview();
+      });
+      sw.appendChild(tab);
+    });
+  }
+
+  // ===== 過往紀錄（Demo 三組） =====
+  const historyRecords = [
+    {
+      id: 'xmind-2025',
+      label: 'XMIND LTD',
+      projectShort: 'XMind 宣傳',
+      data: {
+        invoiceDate: '2025-12-10',
+        projectName: 'XMind 宣傳',
+        billCompany: 'XMIND LTD',
+        billVat: '38821246-000-11',
+        billAddress: '26/F., Beautiful Group Tower, 77 Connaught Road Central, HongKong',
+        billEmail: 'joni@xmind.app',
+        items: [
+          { desc: '社群貼文（Facebook & Threads）＋電子報（工具推薦區）＋官網推薦版位', qty: 1, price: 1000 }
+        ],
+        taxRate: 0,
+        dueDate: '2026-05-30',
+        accountName: '雷柚媒體文創有限公司',
+        bankName: '玉山銀行（808）',
+        accountNumber: '1229-900-000000',
+        notes: '更多匯款資訊（Paypal、美國銀行...等），詳見：\nhttps://raymondhouch.notion.site/'
+      }
+    },
+    {
+      id: 'notion-2025',
+      label: 'Notion Labs, Inc.',
+      projectShort: 'Notion 工作法專欄合作',
+      data: {
+        invoiceDate: '2025-10-05',
+        projectName: 'Notion 工作法專欄合作',
+        billCompany: 'Notion Labs, Inc.',
+        billVat: '—',
+        billAddress: '2300 Harrison St, San Francisco, CA 94110, USA',
+        billEmail: 'partners@notion.so',
+        items: [
+          { desc: 'YouTube 長影片一支（15 分鐘）＋ 短影音三支', qty: 1, price: 2500 },
+          { desc: '電子報深度文章一篇 + 社群宣傳', qty: 1, price: 800 }
+        ],
+        taxRate: 0,
+        dueDate: '2025-11-15',
+        accountName: '雷柚媒體文創有限公司',
+        bankName: '玉山銀行（808）',
+        accountNumber: '1229-900-000000',
+        notes: '付款方式：Paypal / Wise / 美國銀行匯款皆可。\n詳見：https://raymondhouch.notion.site/'
+      }
+    },
+    {
+      id: 'arcblock-2026',
+      label: '方格子 Vocus',
+      projectShort: '創作者年會 Keynote',
+      data: {
+        invoiceDate: '2026-02-20',
+        projectName: '創作者年會 Keynote 演講',
+        billCompany: '方格子數位有限公司',
+        billVat: '82930148',
+        billAddress: '台北市中山區南京東路二段 100 號 10 樓',
+        billEmail: 'biz@vocus.cc',
+        items: [
+          { desc: 'Keynote 主題演講（60 分鐘）＋ 問答', qty: 1, price: 1800 },
+          { desc: '演講前內容籌備與簡報製作', qty: 1, price: 600 },
+          { desc: '活動後社群宣傳貼文（Threads x 3）', qty: 3, price: 150 }
+        ],
+        taxRate: 5,
+        dueDate: '2026-03-31',
+        accountName: '雷柚媒體文創有限公司',
+        bankName: '玉山銀行（808）',
+        accountNumber: '1229-900-000000',
+        notes: '差旅費另計，依實支實付檢附收據。\n付款方式詳見：https://raymondhouch.notion.site/'
+      }
+    }
+  ];
+
+  let activeHistoryId = null;
+
+  function renderHistoryList() {
+    const list = document.getElementById('historyList');
+    list.innerHTML = '';
+    historyRecords.forEach(rec => {
+      const total = rec.data.items.reduce((s, it) => s + it.qty * it.price, 0);
+      const tax = total * (rec.data.taxRate || 0) / 100;
+      const grand = total + tax;
+      const card = document.createElement('div');
+      card.className = 'history-item' + (activeHistoryId === rec.id ? ' active' : '');
+      card.innerHTML = `
+        <div class="hi-client">${escapeHtml(rec.label)}</div>
+        <div class="hi-project">${escapeHtml(rec.projectShort)}</div>
+        <div class="hi-meta">
+          <span>${fmtDate(rec.data.invoiceDate)}</span>
+          <span class="hi-amount">$${fmt(grand)} USD</span>
+        </div>
+      `;
+      card.addEventListener('click', () => loadRecord(rec.id));
+      list.appendChild(card);
+    });
+  }
+
+  function loadRecord(id) {
+    const rec = historyRecords.find(r => r.id === id);
+    if (!rec) return;
+    activeHistoryId = id;
+    const d = rec.data;
+    document.getElementById('invoiceDate').value = d.invoiceDate;
+    document.getElementById('projectName').value = d.projectName;
+    document.getElementById('billCompany').value = d.billCompany;
+    document.getElementById('billVat').value = d.billVat;
+    document.getElementById('billAddress').value = d.billAddress;
+    document.getElementById('billEmail').value = d.billEmail;
+    document.getElementById('taxRate').value = d.taxRate;
+    document.getElementById('dueDate').value = d.dueDate;
+    document.getElementById('accountName').value = d.accountName;
+    document.getElementById('bankName').value = d.bankName;
+    document.getElementById('accountNumber').value = d.accountNumber;
+    document.getElementById('notes').value = d.notes;
+    items = JSON.parse(JSON.stringify(d.items));
+    renderItemInputs();
+    renderHistoryList();
+    renderPreview();
+  }
+
+  // ===== 品項管理 =====
+  const defaultItems = [
+    { desc: '社群貼文（Facebook & Threads）＋電子報（工具推薦區）＋官網推薦版位', qty: 1, price: 1000 }
+  ];
+  let items = JSON.parse(JSON.stringify(defaultItems));
+
+  const itemList = document.getElementById('itemList');
+
+  function renderItemInputs() {
+    itemList.innerHTML = '';
+    items.forEach((it, idx) => {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <input type="text" placeholder="Description" value="${escapeAttr(it.desc)}" data-i="${idx}" data-k="desc">
+        <input type="number" placeholder="Qty" value="${it.qty}" min="0" step="1" data-i="${idx}" data-k="qty">
+        <input type="number" placeholder="Price" value="${it.price}" min="0" step="0.01" data-i="${idx}" data-k="price">
+        <button class="btn-danger" type="button" data-del="${idx}" title="移除">×</button>
+      `;
+      itemList.appendChild(row);
+    });
+
+    itemList.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const i = +e.target.dataset.i;
+        const k = e.target.dataset.k;
+        if (k === 'desc') items[i][k] = e.target.value;
+        else items[i][k] = parseFloat(e.target.value) || 0;
+        renderPreview();
+      });
+    });
+    itemList.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        items.splice(+e.target.dataset.del, 1);
+        renderItemInputs();
+        renderPreview();
+      });
+    });
+  }
+
+  document.getElementById('addItem').addEventListener('click', () => {
+    items.push({ desc: '', qty: 1, price: 0 });
+    renderItemInputs();
+    renderPreview();
+  });
+
+  // ===== 即時預覽 =====
+  function fmt(n) {
+    return (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${y}/${m}/${d}`;
+  }
+
+  function escapeHtml(s) {
+    return (s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return (s || '').replace(/"/g, '&quot;');
+  }
+
+  function renderPreview() {
+    // 開立公司（頁首）
+    const co = companies.find(c => c.id === activeCompanyId);
+    document.getElementById('p_header').style.background = co.headerColor;
+    document.getElementById('p_coName').textContent = co.name;
+    document.getElementById('p_coSub').textContent = co.sub;
+    document.getElementById('p_coTaxId').textContent = co.taxId;
+    document.getElementById('p_coAddr').textContent = co.address;
+    document.getElementById('p_coEmail').textContent = co.email;
+
+    // 基本
+    document.getElementById('p_date').textContent = fmtDate(document.getElementById('invoiceDate').value);
+    document.getElementById('p_project').textContent = document.getElementById('projectName').value || '—';
+
+    // Billed To
+    const billed = [
+      '公司名：' + (document.getElementById('billCompany').value || '—'),
+      'VAT：' + (document.getElementById('billVat').value || '—'),
+      '地址：' + (document.getElementById('billAddress').value || '—'),
+      'Email：' + (document.getElementById('billEmail').value || '—')
+    ].join('\n');
+    document.getElementById('p_billed').textContent = billed;
+
+    // 品項
+    const tbody = document.getElementById('p_items');
+    tbody.innerHTML = '';
+    let subtotal = 0;
+    items.forEach(it => {
+      const amount = it.qty * it.price;
+      subtotal += amount;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(it.desc)}</td>
+        <td class="num">${it.qty}</td>
+        <td class="num">${fmt(it.price)}</td>
+        <td class="num">${fmt(amount)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const tax = subtotal * taxRate / 100;
+    const grand = subtotal + tax;
+    document.getElementById('p_subtotal').textContent = fmt(subtotal);
+    document.getElementById('p_taxRate').textContent = taxRate;
+    document.getElementById('p_tax').textContent = fmt(tax);
+    document.getElementById('p_grand').textContent = fmt(grand);
+
+    // 付款
+    document.getElementById('p_due').textContent = fmtDate(document.getElementById('dueDate').value);
+    document.getElementById('p_accName').textContent = document.getElementById('accountName').value || '—';
+    document.getElementById('p_bank').textContent = document.getElementById('bankName').value || '—';
+    document.getElementById('p_accNum').textContent = document.getElementById('accountNumber').value || '—';
+
+    // 備註
+    document.getElementById('p_notes').textContent = document.getElementById('notes').value || '';
+  }
+
+  // 綁定所有表單欄位
+  ['invoiceDate','projectName','billCompany','billVat','billAddress','billEmail',
+   'taxRate','dueDate','accountName','bankName','accountNumber','notes'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderPreview);
+  });
+
+  // 初始化
+  renderCompanySwitcher();
+  renderItemInputs();
+  renderHistoryList();
+  renderPreview();
+</script>
+
+</body>
+</html>
